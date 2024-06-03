@@ -4,6 +4,7 @@ import { Paperclip, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { getSignedURL } from "./actions";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Home() {
   const [file, setFile] = useState<File | undefined>(undefined);
@@ -12,15 +13,43 @@ export default function Home() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const signedURLResult = await getSignedURL();
-    if (signedURLResult.failure !== undefined) {
-      console.error("Error");
-      return;
-    }
-    const url = signedURLResult.success.url;
-    console.log("url ", url);
+    try {
+      toast({
+        title: "Uploading file...",
+        description: "Please wait while the file is being uploaded!",
+        variant: "default",
+      });
+      if (file) {
+        const signedURLResult = await getSignedURL();
+        if (signedURLResult.failure !== undefined) {
+          console.error("Error");
+          return;
+        }
+        const url = signedURLResult.success.url;
 
-    console.log("File", file);
+        await fetch(url, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        console.log("File", file);
+      }
+    } catch (error) {
+      toast({
+        title: "Uhh... Something went wrong",
+        description: "Please try again!",
+        variant: "destructive",
+      });
+    } finally {
+      toast({
+        title: "Done! ✅",
+        description: "File successfully uploaded.",
+        variant: "default",
+      });
+    }
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {

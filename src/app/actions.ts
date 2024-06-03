@@ -28,6 +28,7 @@ export async function getSignedURL() {
   });
 
   const signedUrl = await getSignedUrl(s3, putObjCommand, {
+    // set the time to 60 seconds, after that you wont be able to upload the file
     expiresIn: 60,
   });
 
