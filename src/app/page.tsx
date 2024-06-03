@@ -6,6 +6,16 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import { getSignedURL } from "./actions";
 import { toast } from "@/components/ui/use-toast";
 
+const computeSHA256 = async (file: File) => {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hashHex;
+};
+
 export default function Home() {
   const [file, setFile] = useState<File | undefined>(undefined);
   const [fileUrl, setFileUrl] = useState<string | undefined>(undefined);
@@ -20,11 +30,22 @@ export default function Home() {
         variant: "default",
       });
       if (file) {
-        const signedURLResult = await getSignedURL();
+        const checksum = await computeSHA256(file);
+        const signedURLResult = await getSignedURL(
+          file.type,
+          file.size,
+          checksum,
+        );
+
         if (signedURLResult.failure !== undefined) {
-          console.error("Error");
+          toast({
+            title: "Uhh... Something went wrong",
+            description: signedURLResult.failure.toString(),
+            variant: "destructive",
+          });
           return;
         }
+
         const url = signedURLResult.success.url;
 
         await fetch(url, {
@@ -35,20 +56,22 @@ export default function Home() {
           },
         });
 
-        console.log("File", file);
+        toast({
+          title: "Done! ✅",
+          description: "File successfully uploaded.",
+          variant: "default",
+        });
       }
     } catch (error) {
+      console.log("error ", error);
       toast({
         title: "Uhh... Something went wrong",
         description: "Please try again!",
         variant: "destructive",
       });
     } finally {
-      toast({
-        title: "Done! ✅",
-        description: "File successfully uploaded.",
-        variant: "default",
-      });
+      setFile(undefined);
+      setFileUrl(undefined);
     }
   };
 
